@@ -10,11 +10,64 @@
 </head>
 <body><div class="wrap"><div class="hero"><h1>📚 My English Words</h1><div class="sub">把想学的单词一次粘进来，直接听标准发音。</div></div><div class="card"><textarea id="input" placeholder="例如：\nembark\nexclude\ndevastating\ntorrents\ndebris"></textarea><div class="row"><button class="primary" id="add">＋ 添加单词</button><button class="soft" id="clear">清空</button><span class="small" id="count"></span></div></div><div class="card"><div class="row" style="margin-top:0"><strong>🔊 发音</strong><select id="accent"><option value="us">🇺🇸 美式</option><option value="uk">🇬🇧 英式</option></select><button class="soft" id="playAll">▶️ 播放全部</button><span class="small" id="status"></span></div></div><div class="card"><div id="list" class="empty">还没有单词。</div></div></div>
 <script>
-const KEY="myEnglishWordsV2";let words=JSON.parse(localStorage.getItem(KEY)||"[]");const audioCache=new Map();function save(){localStorage.setItem(KEY,JSON.stringify(words))}function esc(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
-document.getElementById("add").onclick=()=>{const input=document.getElementById("input"),incoming=input.value.split(/[\s,，、;；]+/).map(x=>x.trim()).filter(Boolean),seen=new Set(words.map(x=>x.toLowerCase()));for(const w of incoming)if(!seen.has(w.toLowerCase())){words.push(w);seen.add(w.toLowerCase())}input.value="";save();render()};document.getElementById("clear").onclick=()=>{if(confirm("确定清空全部单词吗？")){words=[];audioCache.clear();save();render()}};
-function audioUrl(word){const lang=document.getElementById("accent").value;const safe=encodeURIComponent(word);return lang==="uk"?`https://commons.wikimedia.org/wiki/Special:Redirect/file/En-uk-${safe}.ogg`:`https://commons.wikimedia.org/wiki/Special:Redirect/file/En-us-${safe}.ogg`}
-async function play(word){const status=document.getElementById("status");status.textContent="正在加载发音…";const key=document.getElementById("accent").value+"|"+word.toLowerCase();let url=audioCache.get(key)||audioUrl(word);audioCache.set(key,url);try{const a=new Audio(url);a.preload="auto";a.volume=1;await a.play();status.textContent=""}catch(e){const lang=document.getElementById("accent").value==="uk"?"en-GB":"en-US";const tts=`https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(word)}&tl=${lang}&ttsspeed=0.8`;try{const a=new Audio(tts);await a.play();status.textContent=""}catch(e2){status.textContent="这个单词暂时无法播放，请检查网络。"}}}
-document.getElementById("playAll").onclick=async()=>{for(const w of words){await play(w);await new Promise(r=>setTimeout(r,1200))}};
-function render(){const list=document.getElementById("list");document.getElementById("count").textContent=words.length?`共 ${words.length} 个`:"";if(!words.length){list.className="empty";list.textContent="还没有单词。";return}list.className="";list.innerHTML=words.map((w,i)=>`<div class="word"><div><div><span class="term">${esc(w)}</span><span class="ipa" id="ipa${i}">/…/</span></div><div class="meaning" id="mean${i}">正在查询释义…</div></div><div class="actions"><button class="play" data-play="${esc(w)}">🔊</button><button class="soft" data-del="${i}">删除</button></div></div>`).join("");list.querySelectorAll("[data-play]").forEach(b=>b.onclick=()=>play(b.dataset.play));list.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{words.splice(Number(b.dataset.del),1);save();render()});words.forEach((w,i)=>lookup(w,i))}
-async function lookup(word,i){try{const r=await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/"+encodeURIComponent(word));if(!r.ok)throw 0;const d=await r.json(),item=d[0];let ipa=item.phonetic||"";if(!ipa)for(const p of item.phonetics||[])if(p.text){ipa=p.text;break}let meaning="";for(const m of item.meanings||[])if(m.definitions?.[0]){meaning=m.definitions[0].definition;break}document.getElementById("ipa"+i).textContent=ipa||"暂无音标";document.getElementById("mean"+i).textContent=meaning||"暂无释义"}catch{document.getElementById("ipa"+i).textContent="暂无音标";document.getElementById("mean"+i).textContent="暂无释义"}}render();
+const KEY="myEnglishWordsV2";
+let words=JSON.parse(localStorage.getItem(KEY)||"[]");
+const audioCache=new Map();
+function save(){localStorage.setItem(KEY,JSON.stringify(words))}
+function esc(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+
+document.getElementById("add").onclick=()=>{const input=document.getElementById("input"),incoming=input.value.split(/[\s,，、;；]+/).map(x=>x.trim()).filter(Boolean),seen=new Set(words.map(x=>x.toLowerCase()));for(const w of incoming)if(!seen.has(w.toLowerCase())){words.push(w);seen.add(w.toLowerCase())}input.value="";save();render()};
+document.getElementById("clear").onclick=()=>{if(confirm("确定清空全部单词吗？")){words=[];audioCache.clear();save();render()}};
+
+async function play(word){
+  const status=document.getElementById("status");
+  const key=word.toLowerCase();
+  const url=audioCache.get(key);
+  if(!url){status.textContent="这个单词还没有找到音频…";return}
+  status.textContent="正在播放…";
+  try{
+    const a=new Audio(url);
+    a.preload="auto";
+    a.volume=1;
+    await a.play();
+    a.onended=()=>status.textContent="";
+  }catch(e){status.textContent="音频播放失败，请刷新页面后再试。";}
+}
+
+document.getElementById("playAll").onclick=async()=>{for(const w of words){await play(w);await new Promise(r=>setTimeout(r,1300))}};
+
+function render(){
+ const list=document.getElementById("list");
+ document.getElementById("count").textContent=words.length?`共 ${words.length} 个`:"";
+ if(!words.length){list.className="empty";list.textContent="还没有单词。";return}
+ list.className="";
+ list.innerHTML=words.map((w,i)=>`<div class="word"><div><div><span class="term">${esc(w)}</span><span class="ipa" id="ipa${i}">/…/</span></div><div class="meaning" id="mean${i}">正在查询释义…</div></div><div class="actions"><button class="play" data-play="${esc(w)}">🔊</button><button class="soft" data-del="${i}">删除</button></div></div>`).join("");
+ list.querySelectorAll("[data-play]").forEach(b=>b.onclick=()=>play(b.dataset.play));
+ list.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{words.splice(Number(b.dataset.del),1);save();render()});
+ words.forEach((w,i)=>lookup(w,i));
+}
+
+async function lookup(word,i){
+ try{
+  const r=await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/"+encodeURIComponent(word));
+  if(!r.ok)throw 0;
+  const d=await r.json(),item=d[0];
+  let ipa=item.phonetic||"";
+  let audio="";
+  for(const p of item.phonetics||[]){
+    if(!ipa&&p.text)ipa=p.text;
+    if(p.audio&&!audio)audio=p.audio;
+  }
+  if(audio.startsWith("//"))audio="https:"+audio;
+  if(audio)audioCache.set(word.toLowerCase(),audio);
+  let meaning="";
+  for(const m of item.meanings||[])if(m.definitions?.[0]){meaning=m.definitions[0].definition;break}
+  document.getElementById("ipa"+i).textContent=ipa||"暂无音标";
+  document.getElementById("mean"+i).textContent=meaning||"暂无释义";
+ }catch{
+  document.getElementById("ipa"+i).textContent="暂无音标";
+  document.getElementById("mean"+i).textContent="查询失败，请检查网络";
+ }
+}
+render();
 </script></body></html>
