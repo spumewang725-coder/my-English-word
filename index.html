@@ -19,22 +19,42 @@ function esc(s){return s.replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt
 document.getElementById("add").onclick=()=>{const input=document.getElementById("input"),incoming=input.value.split(/[\s,，、;；]+/).map(x=>x.trim()).filter(Boolean),seen=new Set(words.map(x=>x.toLowerCase()));for(const w of incoming)if(!seen.has(w.toLowerCase())){words.push(w);seen.add(w.toLowerCase())}input.value="";save();render()};
 document.getElementById("clear").onclick=()=>{if(confirm("确定清空全部单词吗？")){words=[];audioCache.clear();save();render()}};
 
-async function play(word){
-  const status=document.getElementById("status");
-  const key=word.toLowerCase();
-  const url=audioCache.get(key);
-  if(!url){status.textContent="这个单词还没有找到音频…";return}
-  status.textContent="正在播放…";
-  try{
-    const a=new Audio(url);
-    a.preload="auto";
-    a.volume=1;
-    await a.play();
-    a.onended=()=>status.textContent="";
-  }catch(e){status.textContent="音频播放失败，请刷新页面后再试。";}
+function systemSpeak(word){
+  return new Promise(resolve=>{
+    if(!('speechSynthesis' in window)){resolve(false);return}
+    speechSynthesis.cancel();
+    const u=new SpeechSynthesisUtterance(word);
+    u.lang=document.getElementById("accent").value==='uk'?'en-GB':'en-US';
+    u.rate=0.82;
+    u.pitch=1;
+    const voices=speechSynthesis.getVoices();
+    const wanted=u.lang;
+    const voice=voices.find(v=>v.lang===wanted)||voices.find(v=>v.lang&&v.lang.toLowerCase().startsWith(wanted.slice(0,2).toLowerCase()));
+    if(voice)u.voice=voice;
+    u.onend=()=>resolve(true);
+    u.onerror=()=>resolve(false);
+    speechSynthesis.speak(u);
+  });
 }
 
-document.getElementById("playAll").onclick=async()=>{for(const w of words){await play(w);await new Promise(r=>setTimeout(r,1300))}};
+async function play(word){
+  const status=document.getElementById("status");
+  const url=audioCache.get(word.toLowerCase());
+  if(url){
+    status.textContent="正在播放…";
+    try{
+      const a=new Audio(url);a.preload="auto";a.volume=1;
+      await a.play();
+      a.onended=()=>status.textContent="";
+      return;
+    }catch(e){}
+  }
+  status.textContent="使用系统英语发音…";
+  const ok=await systemSpeak(word);
+  status.textContent=ok?"":"发音失败，请检查浏览器声音设置。";
+}
+
+document.getElementById("playAll").onclick=async()=>{for(const w of words){await play(w);await new Promise(r=>setTimeout(r,450))}};
 
 function render(){
  const list=document.getElementById("list");
@@ -66,8 +86,10 @@ async function lookup(word,i){
   document.getElementById("mean"+i).textContent=meaning||"暂无释义";
  }catch{
   document.getElementById("ipa"+i).textContent="暂无音标";
-  document.getElementById("mean"+i).textContent="查询失败，请检查网络";
+  document.getElementById("mean"+i).textContent="暂无释义";
  }
 }
+
+if('speechSynthesis' in window){speechSynthesis.getVoices();window.speechSynthesis.onvoiceschanged=()=>speechSynthesis.getVoices()}
 render();
 </script></body></html>
