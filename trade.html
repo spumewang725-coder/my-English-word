@@ -1,26 +1,6 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>外贸场景训练</title>
-<style>body{font-family:system-ui;background:#f6f7fb;padding:20px;color:#222}.card{background:#fff;padding:20px;border-radius:16px;max-width:700px;margin:auto}button,input,textarea{padding:10px;border-radius:8px;border:1px solid #ddd;margin:5px}button{cursor:pointer}.primary{background:#6d4aff;color:white}.q{font-size:22px;margin:20px 0}</style>
-</head>
-<body>
-<div class="card">
-<h1>💼 外贸场景训练</h1>
-<select id="scene" onchange="show()"></select>
-<div id="box"></div>
-</div>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>外贸场景训练</title><style>body{font-family:system-ui;background:#f6f7fb;padding:20px;color:#222}.card{background:#fff;padding:20px;border-radius:16px;max-width:800px;margin:auto}button,input,textarea,select{padding:10px;border-radius:8px;border:1px solid #ddd;margin:5px}button{cursor:pointer}.primary{background:#6d4aff;color:#fff}.q{font-size:20px;margin:18px 0}.item{padding:15px;border-bottom:1px solid #eee}</style></head>
+<body><div class="card"><h1>💼 外贸场景训练</h1><select id="scene" onchange="render()"></select><button onclick="addSentence()">+ 添加句子</button><button class="primary" onclick="practice()">开始练习</button><div id="box"></div></div>
 <script>
-const data={
-'报价':[{'cn':'这是我们目前最有竞争力的价格。','en':'This is our most competitive price at the moment.'}],
-'催付款':[{'cn':'请尽快安排付款。','en':'Please arrange the payment as soon as possible.'}],
-'催货':[{'cn':'请告知订单目前的进展情况。','en':'Please update us on the current progress of the order.'}],
-'延期说明':[{'cn':'由于原材料短缺，生产进度受到影响。','en':'Due to the shortage of raw materials, the production schedule has been affected.'}]
-};
-let s=document.getElementById('scene');Object.keys(data).forEach(x=>s.innerHTML+=`<option>${x}</option>`);
-function show(){let arr=data[s.value];document.getElementById('box').innerHTML=arr.map((x,i)=>`<div class='q'>🇨🇳 ${x.cn}</div><textarea id='a${i}' placeholder='输入英文'></textarea><button class='primary' onclick="check(${i})">查看答案</button><p id='r${i}'></p>`).join('')}
-function check(i){let x=data[s.value][i];document.getElementById('r'+i).innerHTML='参考答案：<b>'+x.en+'</b>'}
-show();
-</script>
-</body></html>
+let data=JSON.parse(localStorage.tradeData||JSON.stringify({报价:[{cn:'这是我们目前最有竞争力的价格。',en:'This is our most competitive price at the moment.'}],催付款:[{cn:'请尽快安排付款。',en:'Please arrange the payment as soon as possible.'}],催货:[{cn:'请告知订单目前的进展情况。',en:'Please update us on the current progress of the order.'}],延期说明:[{cn:'由于原材料短缺，生产进度受到影响。',en:'Due to the shortage of raw materials, the production schedule has been affected.'}]}));
+let s=document.getElementById('scene');function save(){localStorage.tradeData=JSON.stringify(data)}function load(){s.innerHTML=Object.keys(data).map(x=>`<option>${x}</option>`).join('')}function render(){let arr=data[s.value]||[];box.innerHTML=arr.map((x,i)=>`<div class='item'><b>中文：</b>${x.cn}<br><b>英文：</b>${x.en}<br><button onclick="del(${i})">删除</button></div>`).join('')}function addSentence(){let cn=prompt('请输入中文');let en=prompt('请输入英文');if(cn&&en){data[s.value].push({cn,en});save();render()}}function del(i){data[s.value].splice(i,1);save();render()}function practice(){let arr=data[s.value];let x=arr[Math.floor(Math.random()*arr.length)];box.innerHTML=`<div class='q'>🇨🇳 ${x.cn}</div><textarea id='ans' placeholder='输入英文'></textarea><button class='primary' onclick="document.getElementById('show').innerHTML='参考答案：'+x.en">提交</button><p id='show'></p>`}load();render();</script></body></html>
