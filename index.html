@@ -1,12 +1,15 @@
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My English Words</title></head><body><div id="loading">正在加载词库…</div><script>
 (async()=>{
- const url='https://raw.githubusercontent.com/spumewang725-coder/my-English-word/05891aec87447e4831d97d6ecbd568a76f278a3a/index.html';
+ const url='https://raw.githubusercontent.com/spumewang725-coder/my-English-word/4bb1ecc525669a0d257c0880f60af0dadfe1e24e/index.html';
  try{
   let html=await (await fetch(url)).text();
-  const old=/function parseLine\(s\).*?function scopeWords\(\)/s;
-  const fixed=`function parseLine(s){s=String(s||'').trim();if(!s)return null;let m=s.match(/^(.+?)\s*[-–—]\s*([\u4e00-\u9fff][\u4e00-\u9fff\s、，,。；;：:！!?？]*)$/);if(m)return {word:m[1].trim(),zh:m[2].trim()};m=s.match(/^(.*?)\s+([\u4e00-\u9fff][\u4e00-\u9fff\s、，,。；;：:！!?？]*)$/);return m?{word:m[1].trim(),zh:m[2].trim()}:{word:s,zh:''}}function parseBulk(text){let lines=String(text||'').replace(/\r/g,'').split(/\n+/).map(x=>x.trim()).filter(Boolean),out=[];lines.forEach(line=>{let re=/([A-Za-z][A-Za-z0-9'&]*(?:\s+[A-Za-z][A-Za-z0-9'&]*)*)\s*[-–—]\s*([\u4e00-\u9fff][^\s]*?)(?=\s+[A-Za-z][A-Za-z0-9'&]*(?:\s+[A-Za-z][A-Za-z0-9'&]*)*\s*[-–—]|$)/g,m,found=false;while((m=re.exec(line))){out.push({word:m[1].trim(),zh:m[2].trim()});found=true}if(!found){let x=parseLine(line);if(x)out.push(x)}});return out}function scopeWords()`;
-  html=html.replace(old,fixed);
-  html=html.replace('格式：英文词/词组 + 空格 + 中文释义。支持 69、100、200 个词一次性添加。','格式支持：Potatoes-土豆，也支持 kiwi fruit 猕猴桃；一行可放多个词条。');
+  const oldParse=/function parseLine\(s\).*?function scopeWords\(\)/s;
+  const fixedParse=`function parseLine(s){s=String(s||'').trim();if(!s)return null;let m=s.match(/^(.+?)\\s*[-–—]\\s*([\\u4e00-\\u9fff][\\u4e00-\\u9fff\\s、，,。；;：:！!?？]*)$/);if(m)return {word:m[1].trim(),zh:m[2].trim()};m=s.match(/^(.*?)\\s+([\\u4e00-\\u9fff][\\u4e00-\\u9fff\\s、，,。；;：:！!?？]*)$/);return m?{word:m[1].trim(),zh:m[2].trim()}:{word:s,zh:''}}function parseBulk(text){let lines=String(text||'').replace(/\\r/g,'').split(/\\n+/).map(x=>x.trim()).filter(Boolean),out=[];lines.forEach(line=>{let re=/([A-Za-z][A-Za-z0-9'&]*(?:\\s+[A-Za-z][A-Za-z0-9'&]*)*)\\s*[-–—]\\s*([\\u4e00-\\u9fff][^\\s]*?)(?=\\s+[A-Za-z][A-Za-z0-9'&]*(?:\\s+[A-Za-z][A-Za-z0-9'&]*)*\\s*[-–—]|$)/g,m,found=false;while((m=re.exec(line))){out.push({word:m[1].trim(),zh:m[2].trim()});found=true}if(!found){let x=parseLine(line);if(x)out.push(x)}});return out}function scopeWords()`;
+  html=html.replace(oldParse,fixedParse);
+  const oldAdd=/\$\('add'\)\.onclick=function\(\)\{.*?\$\('clear'\)\.onclick=/s;
+  const newAdd=`$('add').onclick=function(){let p=$('parentSelect').value,c=$('childSelect').value,seen=new Set(words.map(x=>english(x).toLowerCase()));let parsed=parseBulk($('input').value);let added=0,updated=0,skipped=0;parsed.filter(x=>x.word).forEach(o=>{let k=o.word.toLowerCase();let existing=words.find(w=>english(w).toLowerCase()===k);if(!existing){words.push({word:o.word,parent:p,category:c,_zh:o.zh||''});seen.add(k);added++}else if(o.zh&&!existing._zh){existing._zh=o.zh;updated++}else{skipped++}});$('input').value='';selectedParent=p;selectedChild=c;save();render();alert(\`本次识别 ${'${'}parsed.length} 条：新增 ${'${'}added} 条，补充中文 ${'${'}updated} 条，重复跳过 ${'${'}skipped} 条。\`)};$('clear').onclick=`;
+  html=html.replace(oldAdd,newAdd);
+  html=html.replace('格式：英文词/词组 + 空格 + 中文释义。英文词组不会被拆开。','格式支持：Potatoes-土豆，也支持 kiwi fruit-猕猴桃；一行可以放多个词条。');
   document.open();document.write(html);document.close();
  }catch(e){document.body.innerHTML='<p>加载失败，请刷新页面。</p><pre>'+String(e)+'</pre>'}
 })();
