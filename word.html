@@ -1,12 +1,23 @@
 <!doctype html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>单词学习</title></head>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>单词学习</title>
+</head>
 <body>
 <script>
 (async()=>{
-const url='https://raw.githubusercontent.com/spumewang725-coder/my-English-word/4bb1ecc525669a0d257c0880f60af0dadfe1e24e/index.html';
-const html=await (await fetch(url)).text();
-document.open();document.write(html);document.close();
+ try{
+ const url='https://raw.githubusercontent.com/spumewang725-coder/my-English-word/4bb1ecc525669a0d257c0880f60af0dadfe1e24e/index.html?cache=2';
+ const res=await fetch(url);
+ const html=await res.text();
+ document.open();
+ document.write(html);
+ document.close();
+ }catch(e){
+ document.body.innerHTML='<h2>单词模块加载失败，请刷新重试</h2>';
+ }
 })();
 </script>
 </body>
