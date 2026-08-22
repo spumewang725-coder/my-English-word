@@ -1,0 +1,39 @@
+name: Fix bulk word import
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-import.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch index.html
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          old="""function parseLine(s){s=String(s).replace(/^\\s+|\\s+$/g,'');if(!s)return null;s=s.replace(/\\\\\\n/g,'\\n').trim();let m=s.match(/^(.*?)\\s*([\\u4e00-\\u9fff][\\u4e00-\\u9fff\\s、，,。；;：:！!?？]*)$/);if(!m)return {word:s,zh:''};let word=m[1].trim(),zh=m[2].trim();return word?{word,zh}:null}function parseBulk(text){let normalized=String(text||'').replace(/\\\\r?\\\\n/g,'\\n').replace(/\\r/g,'\\n');let lines=normalized.split(/\\n+/).map(x=>x.trim()).filter(Boolean);let out=[];lines.forEach(line=>{let x=parseLine(line);if(x)out.push(x)});return out}"""
+          new="""function parseLine(s){s=String(s||'').trim();if(!s)return null;let hy=String.fromCharCode(45,8211,8212);let m=s.match(new RegExp('^(.+?)\\\\s*['+hy+']\\\\s*([\\u4e00-\\u9fff][\\u4e00-\\u9fff\\s、，,。；;：:！!?？]*)$'));if(m)return {word:m[1].trim(),zh:m[2].trim()};m=s.match(/^(.*?)\\s+([\\u4e00-\\u9fff][\\u4e00-\\u9fff\\s、，,。；;：:！!?？]*)$/);return m?{word:m[1].trim(),zh:m[2].trim()}:{word:s,zh:''}}function parseBulk(text){let lines=String(text||'').replace(/\\r/g,'').split(/\\n+/).map(x=>x.trim()).filter(Boolean),out=[];lines.forEach(line=>{let re=/([A-Za-z][A-Za-z0-9'&]*(?:\\s+[A-Za-z][A-Za-z0-9'&]*)*)\\s*[-–—]\\s*([\\u4e00-\\u9fff][^\\s]*?)(?=\\s+[A-Za-z][A-Za-z0-9'&]*(?:\\s+[A-Za-z][A-Za-z0-9'&]*)*\\s*[-–—]|$)/g,m;let found=false;while((m=re.exec(line))){out.push({word:m[1].trim(),zh:m[2].trim()});found=true}if(!found){let x=parseLine(line);if(x)out.push(x)}});return out}"""
+          if old not in s:
+              raise SystemExit('target parse block not found')
+          s=s.replace(old,new,1)
+          old2="""$('add').onclick=function(){let p=$('parentSelect').value,c=$('childSelect').value,seen=new Set(words.map(x=>english(x).toLowerCase()));$('input').value.split(/\\n+/).map(parseLine).filter(x=>x.word).forEach(o=>{let k=o.word.toLowerCase();if(!seen.has(k)){words.push({word:o.word,parent:p,category:c,_zh:o.zh});seen.add(k)}else if(o.zh){let x=words.find(w=>english(w).toLowerCase()===k);if(x&&!x._zh)x._zh=o.zh}});$('input').value='';selectedParent=p;selectedChild=c;save();render()};"""
+          new2="""$('add').onclick=function(){let p=$('parentSelect').value,c=$('childSelect').value,parsed=parseBulk($('input').value),seen=new Set(words.map(x=>english(x).toLowerCase())),added=0,updated=0,skipped=0;parsed.forEach(o=>{let k=o.word.toLowerCase();if(!seen.has(k)){words.push({word:o.word,parent:p,category:c,_zh:o.zh});seen.add(k);added++}else{let x=words.find(w=>english(w).toLowerCase()===k);if(x&&o.zh&&!x._zh){x._zh=o.zh;updated++}else skipped++}});$('input').value='';selectedParent=p;selectedChild=c;save();render();$('importMsg').style.display='block';$('importMsg').textContent=`✅ 识别 ${parsed.length} 条：新增 ${added} 条，补充中文 ${updated} 条，重复跳过 ${skipped} 条。`;};"""
+          if old2 not in s:
+              raise SystemExit('target add block not found')
+          s=s.replace(old2,new2,1)
+          s=s.replace('格式：英文词/词组 + 空格 + 中文释义。支持 69、100、200 个词一次性添加。','格式支持：Potatoes-土豆，也支持 kiwi fruit 猕猴桃；一行可放多个词条。')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'Fix bulk word parsing and Chinese meanings'
+          git push
