@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>单词学习</title>
-</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>单词学习</title></head>
 <body>
 <script>
-location.href='index.html';
+(async()=>{
+const url='https://raw.githubusercontent.com/spumewang725-coder/my-English-word/4bb1ecc525669a0d257c0880f60af0dadfe1e24e/index.html';
+const html=await (await fetch(url)).text();
+document.open();document.write(html);document.close();
+})();
 </script>
 </body>
 </html>
